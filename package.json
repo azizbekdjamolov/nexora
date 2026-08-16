@@ -1,0 +1,27 @@
+{
+  "name": "universal-platform",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Universal multi-platform foundation: Website + Telegram Bot + Telegram Mini App on one backend and one database",
+  "workspaces": [
+    "shared",
+    "api",
+    "bot",
+    "web"
+  ],
+  "scripts": {
+    "build": "npm run build -w shared && npm run build -w api && npm run build -w bot && npm run build -w web",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w api && npm run typecheck -w bot && npm run typecheck -w web",
+    "lint": "npm run lint -w web",
+    "dev": "concurrently -n api,bot,web -c blue,green,magenta \"npm run dev -w api\" \"npm run dev -w bot\" \"npm run dev -w web\"",
+    "db:push": "npm run db:push -w api",
+    "db:generate": "npm run db:generate -w api",
+    "setup": "npm install && npm run db:generate && npm run db:push"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

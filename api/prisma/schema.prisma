@@ -1,0 +1,367 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// One user, many identities. All application data references User.id.
+model User {
+  id                String    @id @default(cuid())
+  name              String    @default("")
+  email             String?   @unique
+  phone             String?   @unique
+  passwordHash      String?
+  avatar            String?
+  locale            String    @default("en")
+  theme             String    @default("system")
+  telegramUserId    String?   @unique
+  telegramUsername  String?
+  telegramFirstName String?
+  telegramLastName  String?
+  lastActiveAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  profile            Profile?
+  sessions           Session[]
+  telegramIdentities TelegramIdentity[]
+  telegramLinkCodes  TelegramLinkCode[]
+  features           Feature[]
+  aiConversations    AIConversation[]
+  aiUsage            AiUsage[]
+  notifications      Notification[]
+  waterEntries       WaterEntry[]
+  sleepEntries       SleepEntry[]
+  activityEntries    ActivityEntry[]
+  workouts           Workout[]
+  habits             Habit[]
+  goals              Goal[]
+  reminders          Reminder[]
+  dailyWellness      DailyWellness[]
+  diagnostics        Diagnostic[]
+  supportRequests    SupportRequest[]
+}
+
+model Profile {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio                  String?
+  timezone             String?
+  waterTargetMl        Int      @default(2200)
+  sleepGoalMinutes     Int      @default(480)
+  activityStepsGoal    Int      @default(8000)
+  workoutGoalMinutes   Int      @default(30)
+  notificationsEnabled Boolean  @default(true)
+  updatedAt            DateTime @updatedAt
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  lastUsedAt DateTime @default(now())
+  ip         String?
+  userAgent  String?
+
+  @@index([userId])
+}
+
+model TelegramIdentity {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramUserId String   @unique
+  username       String?
+  firstName      String?
+  lastName       String?
+  photoUrl       String?
+  isVerified     Boolean  @default(true)
+  linkedAt       DateTime @default(now())
+
+  @@index([userId])
+}
+
+model TelegramLinkCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  state     String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([userId])
+}
+
+// Topic-neutral business record (kept for compatibility).
+model Feature {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      String   @default("active")
+  data        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+// AI chat conversations, one per user. Never accessible by other users.
+model AIConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String      @default("New chat")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  AIMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model AIMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  tokensUsed     Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model AiUsage {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String
+  model        String
+  requestCount Int      @default(1)
+  tokensUsed   Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  payload   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+// ---------------------------------------------------------------
+// Health, Sport & Wellness tracking domain
+// ---------------------------------------------------------------
+
+// Hydration tracking. Reminders are a tracking feature only — the app
+// never provides medical guidance about required water intake.
+model WaterEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD (user local date)
+  amountMl  Int
+  targetMl  Int      @default(2200)
+  source    String   @default("website") // website | bot | miniapp
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+// Sleep tracking. General wellness insights only — never a diagnosis.
+model SleepEntry {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            String // YYYY-MM-DD
+  sleepStart      DateTime?
+  wakeTime        DateTime?
+  durationMinutes Int
+  goalMinutes     Int       @default(480)
+  source          String    @default("website")
+  note            String?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, date])
+}
+
+// Manual activity tracking. Architecture allows external health API
+// integration later — data stays with the user.
+model ActivityEntry {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          String // YYYY-MM-DD
+  type          String   @default("general") // walking | running | cycling | general
+  steps         Int      @default(0)
+  activeMinutes Int      @default(0)
+  distanceKm    Float?
+  source        String   @default("website")
+  note          String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+// Workout sessions with optional exercise breakdown.
+model Workout {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            String // YYYY-MM-DD
+  category        String // walking | running | strength | mobility | stretching | cardio | custom
+  durationMinutes Int
+  intensity       String? // low | moderate | high
+  notes           String?
+  source          String            @default("website")
+  createdAt       DateTime          @default(now())
+  exercises       WorkoutExercise[]
+
+  @@index([userId, date])
+}
+
+model WorkoutExercise {
+  id              String  @id @default(cuid())
+  workoutId       String
+  workout         Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  name            String
+  sets            Int     @default(1)
+  reps            Int?
+  weightKg        Float?
+  durationSeconds Int?
+}
+
+// Habits: daily or weekly, with a completion log.
+model Habit {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  icon          String            @default("✓")
+  frequency     String            @default("daily") // daily | weekly
+  targetPerWeek Int               @default(7)
+  reminderTime  String?
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  completions   HabitCompletion[]
+
+  @@index([userId])
+}
+
+model HabitCompletion {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD
+  done      Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, date])
+  @@index([date])
+}
+
+// Personal goals with manual progress.
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  targetValue Float?
+  unit        String?
+  progress    Float    @default(0)
+  deadline    String? // YYYY-MM-DD
+  status      String   @default("active") // active | completed | archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+// User-created reminders (medication, water, workout, sleep, habit, custom).
+// Tracking only — the app never prescribes or changes medication.
+model Reminder {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            String    @default("custom") // medication | water | workout | sleep | habit | custom
+  title           String
+  time            String // HH:mm
+  days            String    @default("[]") // JSON array of weekdays 0-6
+  enabled         Boolean   @default(true)
+  payload         String?
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, enabled])
+}
+
+// Aggregated daily wellness record + transparent Wellness Score.
+// The score is a motivation tool, not a medical measurement.
+model DailyWellness {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           String // YYYY-MM-DD
+  score          Int      @default(0)
+  waterMl        Int      @default(0)
+  sleepMinutes   Int      @default(0)
+  steps          Int      @default(0)
+  workoutMinutes Int      @default(0)
+  habitsDone     Int      @default(0)
+  habitsTotal    Int      @default(0)
+  calculatedAt   DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// Self-assessment questionnaire results. Educational wellness insight
+// only — explicitly not a medical diagnosis.
+model Diagnostic {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers   String // JSON array of { questionId, answer } pairs
+  result    String // JSON: { score, sections, recommendations }
+  score     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// User support requests to the admin (adminga murojaat) with replies.
+model SupportRequest {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message    String
+  status      String    @default("new") // new | in_progress | answered | closed
+  adminReply  String?
+  repliedAt   DateTime?
+  notifiedAt  DateTime? // when the bot announced the request to the admin
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}

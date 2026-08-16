@@ -1,0 +1,81 @@
+# NEXORA — Render Blueprint
+# "New +" → "Blueprint" in Render → paste this repo's GitHub URL.
+# Creates 3 services: web (Mini App + site), api (backend + SQLite), bot (Telegram worker).
+# After creation: set env vars (see "Environment" sections below), pick a Disk for api,
+# then "Manual Deploy" → "Deploy latest commit".
+
+services:
+  - type: web
+    name: nexora-api
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: npm ci && npm run build -w shared && npm run build -w api && npm run db:generate -w api
+    startCommand: npm run db:push -w api && npm start -w api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: API_PORT
+        value: 4000
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: WEB_URL
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: BOT_SERVICE_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ADMIN_TELEGRAM_IDS
+        sync: false
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_API_KEY
+        sync: false
+    disk:
+      name: nexora-sqlite
+      mountPath: /opt/render/project/src/api/prisma
+      sizeGB: 1
+
+  - type: web
+    name: nexora-web
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: npm ci && npm run build -w shared && npm run build -w web
+    startCommand: npm start -w web
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: API_URL
+        sync: false
+      - key: WEB_URL
+        sync: false
+
+  - type: worker
+    name: nexora-bot
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: npm ci && npm run build -w shared && npm run build -w bot
+    startCommand: npm start -w bot
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: API_URL
+        sync: false
+      - key: BOT_SERVICE_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_MINI_APP_URL
+        sync: false
+      - key: ADMIN_TELEGRAM_IDS
+        sync: false

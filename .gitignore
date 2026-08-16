@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+.next/
+out/
+
+# env files (never commit secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# database
+*.db
+*.db-journal
+prisma/dev.db*
+
+# misc
+.DS_Store
+*.log
+coverage/

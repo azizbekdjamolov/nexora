@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface: 220 33% 98%;
+  --surface-raised: 220 33% 100%;
+  --surface-border: 220 20% 90%;
+  --text: 222 47% 11%;
+  --text-muted: 222 12% 40%;
+  --glow: 225 90% 65%;
+  --hero-bg: radial-gradient(1200px 800px at 70% -10%, rgba(79, 107, 255, 0.18), transparent 60%),
+    radial-gradient(1000px 700px at 10% 20%, rgba(139, 92, 246, 0.14), transparent 55%),
+    linear-gradient(180deg, #f7f9ff 0%, #eef2fb 100%);
+}
+
+.dark {
+  --surface: 222 40% 5%;
+  --surface-raised: 222 34% 9%;
+  --surface-border: 222 28% 16%;
+  --text: 220 30% 96%;
+  --text-muted: 220 12% 64%;
+  --glow: 225 90% 62%;
+  --hero-bg: radial-gradient(1200px 800px at 70% -10%, rgba(61, 77, 242, 0.28), transparent 60%),
+    radial-gradient(1000px 700px at 10% 20%, rgba(124, 58, 237, 0.22), transparent 55%),
+    linear-gradient(180deg, #05070f 0%, #070b18 45%, #05070f 100%);
+}
+
+* {
+  border-color: hsl(var(--surface-border));
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--hero-bg);
+  background-attachment: fixed;
+  color: hsl(var(--text));
+  font-family: var(--font-inter), system-ui, sans-serif;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+::selection {
+  background: hsl(var(--glow));
+  color: #fff;
+}
+
+.glass {
+  background: color-mix(in srgb, hsl(var(--surface-raised)) 62%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid hsl(var(--surface-border));
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #6b8dff 0%, #a78bfa 50%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-glow {
+  box-shadow: 0 8px 32px -8px hsl(var(--glow) / 0.55);
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Focus visibility for accessibility */
+:focus-visible {
+  outline: 2px solid hsl(var(--glow));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mini App: Telegram viewport safe areas */
+.mini-app {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--hero-bg);
+  min-height: 100dvh;
+}
+
+.mini-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile bottom sheet */
+.bottom-sheet-enter {
+  animation: sheetUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
