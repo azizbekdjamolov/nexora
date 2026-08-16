@@ -22,7 +22,8 @@ export const config = {
     process.env.SITE_DESCRIPTION ?? "One account. Everywhere. Website, Telegram Bot and Mini App on one shared engine.",
   defaultLocale: parseLang(process.env.DEFAULT_LOCALE),
 
-  port: Number(process.env.API_PORT ?? 4000),
+  // Render injects PORT; fall back to API_PORT for local development.
+  port: Number(process.env.PORT ?? process.env.API_PORT ?? 4000),
   apiUrl: process.env.API_URL ?? "http://localhost:4000",
   webUrl: process.env.WEB_URL ?? "http://localhost:3000",
 
