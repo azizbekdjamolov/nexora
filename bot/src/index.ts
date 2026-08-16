@@ -102,11 +102,23 @@ async function main(): Promise<void> {
 
   // Long polling by default; webhook URL is available in config if needed.
   await bot.init();
-  await bot.api.deleteWebhook({ drop_pending_updates: true });
+  await bot.api.deleteWebhook({ drop_pending_updates: true }).catch(() => undefined);
   startSupportPoller(bot);
-  await bot.start({
-    onStart: (me) => console.log(`[bot] @${me.username} started`),
-  });
+
+  // Retry loop: another instance may still hold the long-poll connection
+  // (409 Conflict). Keep trying instead of crashing the process.
+  for (;;) {
+    try {
+      await bot.start({
+        onStart: (me) => console.log(`[bot] @${me.username} started`),
+      });
+      break;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[bot] start failed, retrying in 15s:", msg);
+      await new Promise((resolve) => setTimeout(resolve, 15_000));
+    }
+  }
 }
 
 main().catch((err) => {

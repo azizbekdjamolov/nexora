@@ -30,11 +30,13 @@ interface ConversationState {
     | "sleep:custom"
     | "habit:add"
     | "diag:q"
-    | "support:message";
+    | "support:message"
+    | "ai:chat";
   featureId?: string;
   draftTitle?: string;
   diagIndex?: number;
   diagAnswers?: DiagnosticAnswer[];
+  aiConversationId?: string | null;
 }
 
 // In-memory conversation state (single bot process).
@@ -356,7 +358,8 @@ async function showReminders(ctx: Context, chatId: number, lang: Lang, tgId: str
   }
 }
 
-async function showAI(ctx: Context, lang: Lang): Promise<void> {
+async function showAI(ctx: Context, chatId: number, lang: Lang): Promise<void> {
+  conversations.set(chatId, { step: "ai:chat", aiConversationId: null });
   await ctx.reply(`${tr(lang, "bot.aiHint")}\n\n${tr(lang, "bot.wellnessDisclaimer")}`, { reply_markup: menuKeyboard(lang) });
 }
 
@@ -549,6 +552,17 @@ export async function handleTextMessage(ctx: Context): Promise<unknown> {
     }
   }
 
+  if (conv.step === "ai:chat") {
+    try {
+      const data = await botApi.aiChat(tgId, text, conv.aiConversationId);
+      conv.aiConversationId = data.conversation.id;
+      conversations.set(chatId, conv);
+      return ctx.reply(data.reply.content, { reply_markup: menuKeyboard(lang) });
+    } catch (err) {
+      return ctx.reply(errorText(lang, err), { reply_markup: menuKeyboard(lang) });
+    }
+  }
+
   if (conv.step === "create:title") {
     conv.step = "create:desc";
     conv.draftTitle = text;
@@ -700,7 +714,7 @@ export async function handleCallback(ctx: Context): Promise<unknown> {
     if (field === "goals") return showGoals(ctx, chatId, lang, tgId);
     if (field === "progress") return showProgress(ctx, chatId, lang, tgId);
     if (field === "reminders") return showReminders(ctx, chatId, lang, tgId);
-    if (field === "ai") return showAI(ctx, lang);
+    if (field === "ai") return showAI(ctx, chatId, lang);
     if (field === "summary") return showSummary(ctx, chatId, lang, tgId);
   }
 

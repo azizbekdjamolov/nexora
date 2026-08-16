@@ -17,6 +17,7 @@ import { WorkoutService } from "../services/tracker/WorkoutService";
 import { HabitService } from "../services/tracker/HabitService";
 import { GoalService } from "../services/tracker/GoalService";
 import { ReminderService } from "../services/tracker/ReminderService";
+import { AIService } from "../services/AIService";
 
 /**
  * Service endpoints used by the Telegram Bot process.
@@ -342,6 +343,23 @@ export function registerBotRoutes(app: FastifyInstance): void {
     const locale = (req.body as { locale?: Lang }).locale ?? "en";
     const summary = await WellnessService.aiSummary(user.id, locale);
     return { success: true, data: summary };
+  });
+
+  // AI chat from the bot: same engine as the website, no conversation persistence
+  // across chats unless the bot passes the previous conversationId back.
+  app.post("/api/bot/ai/chat", async (req, reply) => {
+    const tgId = botAuth(req as FastifyRequest, reply);
+    if (!tgId) return;
+    const user = await resolveBotUser(tgId, reply);
+    if (!user) return;
+    const body = (req.body ?? {}) as { content?: string; conversationId?: string | null };
+    const content = String(body.content ?? "").trim().slice(0, 2000);
+    if (!content) {
+      reply.code(400).send({ success: false, error: { code: "invalidInput", message: "content is required." } });
+      return;
+    }
+    const result = await AIService.chat(user.id, { conversationId: body.conversationId ?? null, content }, user.locale);
+    return { success: true, data: result };
   });
 
   // ── Diagnostics & support (adminga murojaat) used by the bot ───────────────

@@ -110,6 +110,8 @@ export const botApi = {
     api<{ reminders: { id: string; title: string; time: string; days: number[]; enabled: boolean }[] }>("/api/bot/wellness/reminders/list", { telegramUserId }),
   wellnessSummary: (telegramUserId: string, locale: string) =>
     api<{ text: string; source: string }>("/api/bot/wellness/summary", { telegramUserId, locale }),
+  aiChat: (telegramUserId: string, content: string, conversationId?: string | null) =>
+    api<{ conversation: { id: string }; reply: { content: string } }>("/api/bot/ai/chat", { telegramUserId, content, conversationId: conversationId ?? null }),
 
   // ── Diagnostics & support ─────────────────────────────────────────────────
   diagnosticsCreate: (telegramUserId: string, answers: { questionId: string; optionKey: string; points: number }[]) =>
